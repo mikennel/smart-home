@@ -30,6 +30,7 @@ function syncCalendarsDaily() {
     if (desc.indexOf(SYNC_MARKER) !== -1) {
       // delete only events previously created by this script
       ev.deleteEvent();
+      Utilities.sleep(100); // Add 100ms delay between deletions
     }
   }
 
@@ -56,6 +57,12 @@ function syncCalendarsDaily() {
 
         // build description preserving existing description + marker
         let desc = ev.getDescription() || '';
+        
+        // Include guest list in description for reference, but don't invite them
+        if (guests.length) {
+          desc += '\n\nORIGINAL_GUESTS: ' + guests.join(', ');
+        }
+        
         desc += '\n\n' + SYNC_MARKER + '|' + sourceId + '|' + originalId;
         if (originalUrl) desc += '\nSOURCE_URL: ' + originalUrl;
 
@@ -64,7 +71,7 @@ function syncCalendarsDaily() {
           location: location
         };
 
-        // create event on target; preserve guests where possible (they might require permissions)
+        // create event on target WITHOUT inviting guests to prevent duplicate invitations
         let newEvent;
         if (isAllDay) {
           // all-day events
@@ -74,16 +81,11 @@ function syncCalendarsDaily() {
           newEvent = targetCal.createEvent(title, start, endTime, options);
         }
 
-        // if there are guests, try inviting (may get blocked if you don't have permission)
-        if (guests.length) {
-          guests.forEach(function(email) {
-            try {
-              newEvent.addGuest(email);
-            } catch (e) {
-              // ignore guest add failures (privacy/permissions)
-            }
-          });
-        }
+        // Add small delay between event creations to avoid rate limiting
+        Utilities.sleep(100);
+
+        // NOTE: Guests are NOT invited to prevent duplicate invitations
+        // Original guest list is preserved in the event description for reference
       } catch (err) {
         Logger.log('Failed copying event: ' + err);
       }

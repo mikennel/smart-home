@@ -20,17 +20,17 @@ discovered_plug = None
 
 async def find_plug_by_name(target_name: str):
     """Discover plug on network by its alias/name"""
-    print(f"🔍 Searching for plug named '{target_name}'...")
+    print(f"[INFO] Searching for plug named '{target_name}'...")
     try:
         devices = await Discover.discover()
         for ip, device in devices.items():
             await device.update()
             if device.alias.lower() == target_name.lower():
-                print(f"✅ Found '{device.alias}' at {ip}")
+                print(f"[SUCCESS] Found '{device.alias}' at {ip}")
                 return device, ip
-        print(f"❌ Plug '{target_name}' not found on network")
+        print(f"[WARNING] Plug '{target_name}' not found on network")
     except Exception as e:
-        print(f"Discovery error: {e}")
+        print(f"[ERROR] Discovery error: {e}")
     return None, None
 
 
@@ -46,7 +46,7 @@ async def get_plug():
             return plug
         except:
             # IP failed, clear it and rediscover
-            print(f"⚠️ Plug not responding at {PLUG_IP}, rediscovering...")
+            print(f"[WARNING] Plug not responding at {PLUG_IP}, rediscovering...")
             PLUG_IP = None
     
     # Discover by name
@@ -62,19 +62,19 @@ async def update_plug_state(should_be_on: bool):
     try:
         plug = await get_plug()
         if not plug:
-            print("❌ Plug not available")
+            print("[ERROR] Plug not available")
             return
         
         await plug.update()
         
         if should_be_on and not plug.is_on:
             await plug.turn_on()
-            print("🔴 ON AIR - Plug turned ON")
+            print("[ON AIR] Plug turned ON")
         elif not should_be_on and plug.is_on:
             await plug.turn_off()
-            print("⚫ OFF AIR - Plug turned OFF")
+            print("[OFF AIR] Plug turned OFF")
     except Exception as e:
-        print(f"Error updating plug: {e}")
+        print(f"[ERROR] Error updating plug: {e}")
 
 
 def check_device_in_use(device_type):
@@ -111,7 +111,7 @@ def check_device_in_use(device_type):
                                 last_used_stop, _ = winreg.QueryValueEx(app_key, "LastUsedTimeStop")
                                 
                                 if last_used_start > last_used_stop:
-                                    print(f"  {device_type} in use by: {subkey_name.split('#')[-1]}")
+                                    # print(f"  {device_type} in use by: {subkey_name.split('#')[-1]}")
                                     return True
                             except FileNotFoundError:
                                 pass
@@ -142,7 +142,7 @@ def monitor_devices():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    print("📡 Device monitoring started")
+    print("[INFO] Device monitoring started")
     
     while True:
         try:
@@ -171,12 +171,12 @@ async def startup_event():
     
     etw_thread = threading.Thread(target=monitor_devices, daemon=True)
     etw_thread.start()
-    print("✅ Status Light API started with ETW monitoring")
+    print("[SUCCESS] Status Light API started with device monitoring")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Stop device monitoring when app shuts down"""
-    print("🛑 Status Light API shutting down")
+    print("[INFO] Status Light API shutting down")
 
 @app.get("/status")
 async def get_status():
